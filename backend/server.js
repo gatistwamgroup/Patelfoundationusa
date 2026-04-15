@@ -30,6 +30,11 @@ const settingRoutes = require('./routes/settingRoutes');
 const emailLogRoutes = require('./routes/emailLogRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
+// Welcome route
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Patel Foundation API is running...' });
+});
+
 // Mount routes
 app.use('/api', testRoutes);
 app.use('/api/auth', authRoutes);
