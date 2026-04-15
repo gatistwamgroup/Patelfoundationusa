@@ -1,0 +1,39 @@
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   index.html
+#	modified:   src/App.tsx
+#	modified:   src/components/About.tsx
+#	new file:   src/components/EmotionalExitPopup.tsx
+#	new file:   src/components/FloatingDonate.tsx
+#	modified:   src/components/Footer.tsx
+#	new file:   src/components/FounderLetter.tsx
+#	modified:   src/components/GlobalEffects.tsx
+#	modified:   src/components/GrandFinale.tsx
+#	new file:   src/components/HandwrittenNote.tsx
+#	modified:   src/components/Hero.tsx
+#	new file:   src/components/Icons/WhatsAppIcon.tsx
+#	new file:   src/components/ImpactHeartbeat.tsx
+#	modified:   src/components/ImpactMap.tsx
+#	modified:   src/components/ImpactStats.tsx
+#	new file:   src/components/JourneyRoadmap.tsx
+#	modified:   src/components/LatestStories.tsx
+#	modified:   src/components/Manifesto.tsx
+#	modified:   src/components/Preloader.tsx
+#	modified:   src/components/ScrollToTop.tsx
+#	modified:   src/components/SmoothScroll.tsx
+#	modified:   src/components/SocialSidebar.tsx
+#	new file:   src/components/Storytelling.tsx
+#	new file:   src/components/WallOfHope.tsx
+#	modified:   src/data/config.ts
+#	modified:   src/index.css
+#	modified:   src/pages/About.tsx
+#	modified:   src/pages/Donate.tsx
+#	modified:   src/pages/Index.tsx
+#	modified:   src/vite-env.d.ts
+#
