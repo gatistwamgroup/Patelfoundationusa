@@ -300,6 +300,7 @@ const captureOrder = async (req, res) => {
         }
 
         const accessToken = await generateAccessToken();
+        const io = req.app.get('io');
 
         console.log(`[PayPal] Capturing order: ${orderID}`);
 
@@ -455,7 +456,6 @@ const captureOrder = async (req, res) => {
                     });
 
                     // Emit via Socket.io
-                    const io = req.app.get('io');
                     if (io) {
                         io.emit('notification', newNotif);
                     }
@@ -470,7 +470,7 @@ const captureOrder = async (req, res) => {
                         status: "completed", 
                         transactionId: capture.id 
                     },
-                    { new: true }
+                    { returnDocument: 'after' }
                 );
 
                 if (registration) {
@@ -568,7 +568,7 @@ const handleWebhook = async (req, res) => {
                 const reg = await EventRegistration.findOneAndUpdate(
                     { customId },
                     { status: "completed", transactionId },
-                    { new: true }
+                    { returnDocument: 'after' }
                 );
                 if (reg) {
                     console.log(`[DB] Event Registration ${customId} marked COMPLETED via webhook`);
@@ -603,7 +603,7 @@ const handleWebhook = async (req, res) => {
                             ? `${resource.payer.name.given_name} ${resource.payer.name.surname || ""}`.trim()
                             : (resource.payer?.name?.full_name || "")
                     },
-                    { new: true }
+                    { returnDocument: 'after' }
                 );
                 console.log(`[DB] Donation ${customId || 'direct'} marked COMPLETED via webhook`);
             }
@@ -770,7 +770,7 @@ const captureEventOrder = async (req, res) => {
                         status: "completed", 
                         transactionId: capture.id 
                     },
-                    { new: true }
+                    { returnDocument: 'after' }
                 );
 
                 if (registration) {
