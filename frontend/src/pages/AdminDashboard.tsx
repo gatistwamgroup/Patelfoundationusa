@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import {
     LayoutDashboard, Users, DollarSign, TrendingUp,
     Search, Filter, Download, RefreshCw, Mail, Phone, CreditCard,
     CheckCircle2, XCircle, Clock, AlertTriangle, Activity,
     BarChart3, Star, LogOut, Plus, Send, Shield, Bell, Check,
-    Trash2, Edit, Menu, X
+    Trash2, Edit, Menu, X, Ticket, Eye, MapPin
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { formatDistanceToNow } from 'date-fns';
+import { MEDIA } from '@/data/media';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Donation {
@@ -27,6 +26,7 @@ interface Donation {
     status: string;
     source: string;
     paymentMethod: string;
+    transactionId?: string;
     createdAt: string;
     // New donor fields
     address?: string;
@@ -39,6 +39,23 @@ interface Donation {
     comment?: string;
     isAnonymous?: boolean;
     hideAmount?: boolean;
+}
+interface Registration {
+    _id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    city: string;
+    guests: number;
+    ticketType: string;
+    amount: number;
+    currency: string;
+    status: string;
+    transactionId?: string;
+    donationInterest: boolean;
+    volunteer: boolean;
+    message?: string;
+    createdAt: string;
 }
 interface Inquiry {
     _id: string;
@@ -60,11 +77,13 @@ interface AppNotification {
     createdAt: string;
     data?: {
         donationId?: string;
+        registrationId?: string;
         inquiryId?: string;
         email?: string;
         source?: string;
         amount?: number;
         currency?: string;
+        paymentMethod?: string;
         status?: string;
     }
 }
@@ -77,6 +96,9 @@ interface Stats {
     trend: TrendPoint[];
     statusBreakdown: { completed: number; pending: number; failed: number };
     sourceBreakdown: Record<string, number>;
+    totalRegistrations?: number;
+    completedRegistrations?: number;
+    pendingRegistrations?: number;
 }
 
 // ─── Mini Bar Chart (white-theme) ────────────────────────────────────────────
@@ -157,6 +179,7 @@ const KpiCard = ({ label, value, sub, icon: Icon, color }: {
 const MENU_ITEMS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
+    { id: 'registrations', label: 'Event Registrations', icon: Ticket },
     { id: 'top-donors', label: 'Top Donors', icon: Star },
     { id: 'inquiries', label: 'Inquiries', icon: Mail },
     { id: 'contacts', label: 'Contacts', icon: Users },
@@ -176,6 +199,7 @@ const AdminDashboard = () => {
     const [stats, setStats] = useState<Stats | null>(null);
     const [inquiries, setInquiries] = useState<Inquiry[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+    const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
     
     // Notifications State
@@ -204,12 +228,18 @@ const AdminDashboard = () => {
     const [inquiryToDelete, setInquiryToDelete] = useState<string | null>(null);
     const [showInquiryDeleteModal, setShowInquiryDeleteModal] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
+    const [editingRegistration, setEditingRegistration] = useState<Registration | null>(null);
+    const [showRegistrationEditForm, setShowRegistrationEditForm] = useState(false);
+    const [showRegistrationDeleteModal, setShowRegistrationDeleteModal] = useState(false);
+    const [registrationToDelete, setRegistrationToDelete] = useState<string | null>(null);
 
     const authHeader = { Authorization: `Bearer ${token}` };
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
     const countsByType = {
         DONATION: notifications.filter(n => !n.isRead && n.type === 'DONATION').length,
+        REGISTRATION: notifications.filter(n => !n.isRead && n.type === 'REGISTRATION').length,
         INQUIRY: notifications.filter(n => !n.isRead && n.type === 'INQUIRY').length,
         CONTACT: notifications.filter(n => !n.isRead && n.type === 'CONTACT').length,
         NEWSLETTER: notifications.filter(n => !n.isRead && n.type === 'NEWSLETTER').length,
@@ -227,18 +257,20 @@ const AdminDashboard = () => {
         const currentAuth = { Authorization: `Bearer ${token}` };
         try {
             await fetchNotifications();
-            const [dRes, sRes, iRes, nRes, lgRes] = await Promise.all([
+            const [dRes, sRes, iRes, nRes, lgRes, regRes] = await Promise.all([
                 api.get('/donations', { headers: currentAuth }),
                 api.get('/donations/stats', { headers: currentAuth }),
                 api.get('/inquiries', { headers: currentAuth }).catch(() => ({ data: { success: false, data: [] } })),
                 api.get('/newsletter', { headers: currentAuth }).catch(() => ({ data: { success: false, data: [] } })),
-                api.get('/logs', { headers: currentAuth }).catch(() => ({ data: { success: false, data: [] } }))
+                api.get('/logs', { headers: currentAuth }).catch(() => ({ data: { success: false, data: [] } })),
+                api.get('/event-registration', { headers: currentAuth }).catch(() => ({ data: { success: false, data: [] } }))
             ]);
             if (dRes.data.success) setDonations(dRes.data.data);
             if (sRes.data.success) setStats(sRes.data.data);
             if (iRes?.data?.success) setInquiries(iRes.data.data);
             if (nRes?.data?.success) setSubscribers(nRes.data.data);
             if (lgRes?.data?.success) setEmailLogs(lgRes.data.data);
+            if (regRes?.data?.success) setRegistrations(regRes.data.data);
         } catch (e: any) {
             if (e?.response?.status === 401) { logout(); navigate('/admin/login'); }
             else if (!silent) toast.error('Failed to load data');
@@ -285,6 +317,12 @@ const AdminDashboard = () => {
                     setSearch(donation.name);
                 }
             }
+        } else if (notif.type === 'REGISTRATION') {
+            setTab('registrations');
+            if (notif.data?.registrationId) {
+                const reg = registrations.find(r => r._id === notif.data?.registrationId);
+                if (reg) setSearch(reg.fullName);
+            }
         } else if (notif.type === 'INQUIRY') {
             setTab('inquiries');
             if (notif.data?.inquiryId) {
@@ -311,7 +349,12 @@ const AdminDashboard = () => {
 
     const handleTabChange = (newTab: Tab) => {
         setTab(newTab);
+        setSearch('');
+        setFromDate('');
+        setToDate('');
+        setPendingBTOnly(false);
         if (newTab === 'transactions') markAllAsRead('DONATION');
+        if (newTab === 'registrations') markAllAsRead('REGISTRATION');
         if (newTab === 'inquiries') markAllAsRead('INQUIRY');
         if (newTab === 'contacts') markAllAsRead('CONTACT');
         if (newTab === 'newsletter') markAllAsRead('NEWSLETTER');
@@ -354,6 +397,26 @@ const AdminDashboard = () => {
             }
         } catch (e) {
             toast.error("Security alert: Deletion operation failed");
+        }
+    };
+
+    const handleDeleteRegistration = (id: string) => {
+        setRegistrationToDelete(id);
+        setShowRegistrationDeleteModal(true);
+    };
+
+    const confirmDeleteRegistration = async () => {
+        if (!registrationToDelete) return;
+        try {
+            const res = await api.delete(`/event-registration/${registrationToDelete}`, { headers: authHeader });
+            if (res.data.success) {
+                toast.success("Registration deleted successfully");
+                setShowRegistrationDeleteModal(false);
+                setRegistrationToDelete(null);
+                fetchAll(true);
+            }
+        } catch (e) {
+            toast.error("Failed to delete registration");
         }
     };
 
@@ -427,94 +490,82 @@ const AdminDashboard = () => {
         return months;
     }, [filtered, srcFilter]);
 
+    const escapeCSV = (val: any) => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        // If it contains commas, quotes, or newlines, wrap it in quotes and escape internal quotes
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
     const exportCSV = () => {
-        const checkINR = (d: any) => d.paymentMethod === 'BANK_TRANSFER' || d.currency === 'INR' || d.currency === '₹';
-        const rows = [
-            ['Name', 'Email', 'Phone', 'Address', 'City', 'State', 'Zip', 'Country', 'Comment', 'Anonymous', 'Amount', 'Currency', 'Status', 'Source', 'Payment Method', 'Date'],
-            ...filtered.map(d => [
+        const isRegistrationTab = tab === 'registrations';
+        let headers: string[] = [];
+        let dataRows: any[][] = [];
+        let fileName = '';
+
+        if (isRegistrationTab) {
+            headers = ['Full Name', 'Email', 'Phone', 'City', 'Guests', 'Ticket Type', 'Amount', 'Currency', 'Status', 'Volunteer Interest', 'Donation Interest', 'Message', 'Date', 'Transaction ID'];
+            dataRows = registrations.map(r => [
+                r.fullName,
+                r.email,
+                r.phone || '-',
+                r.city || '-',
+                r.guests,
+                r.ticketType,
+                r.amount,
+                r.currency,
+                r.status,
+                r.volunteer ? 'Yes' : 'No',
+                r.donationInterest ? 'Yes' : 'No',
+                r.message || '-',
+                new Date(r.createdAt).toLocaleString(),
+                r.transactionId || '-'
+            ]);
+            fileName = `event_registrations_${new Date().toISOString().split('T')[0]}.csv`;
+        } else {
+            // Default to donations
+            const checkINR = (d: any) => d.paymentMethod === 'BANK_TRANSFER' || d.currency === 'INR' || d.currency === '₹';
+            headers = ['Name', 'Email', 'Phone', 'Address', 'City', 'State', 'Zip', 'Country', 'Comment', 'Anonymous', 'Amount', 'Currency', 'Status', 'Source', 'Payment Method', 'Date', 'Transaction ID'];
+            dataRows = filtered.map(d => [
                 d.name,
-                `"${d.email}"`,
+                d.email,
                 d.phone || '-',
-                `"${d.address || '-'}"`,
+                d.address || '-',
                 d.city || '-',
                 d.state || '-',
                 d.zip || '-',
                 d.country || '-',
-                `"${d.comment || '-'}"`,
+                d.comment || '-',
                 d.isAnonymous ? 'Yes' : 'No',
                 d.amount,
                 checkINR(d) ? 'INR' : 'USD',
                 d.status,
                 d.source,
                 d.paymentMethod || 'UNKNOWN',
-                new Date(d.createdAt).toLocaleString()
-            ]),
-        ];
-        const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
-        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `donations_${new Date().toISOString().split('T')[0]}.csv` });
-        a.click(); URL.revokeObjectURL(a.href);
-        toast.success('CSV exported!');
-    };
-
-    const exportPDF = () => {
-        const doc = new jsPDF();
-        const now = new Date();
-
-        // Header
-        doc.setFontSize(22);
-        doc.setTextColor(17, 24, 39);
-        doc.text("Patel Foundation", 14, 22);
-
-        doc.setFontSize(10);
-        doc.setTextColor(107, 114, 128);
-        doc.text("Donation Revenue Report", 14, 30);
-        doc.text(`Generated on: ${now.toLocaleString()}`, 14, 35);
-
-        // Stats Summary
-        doc.setDrawColor(243, 244, 246);
-        doc.setFillColor(249, 250, 251);
-        doc.roundedRect(14, 45, 182, 35, 3, 3, 'FD');
-
-        doc.setFontSize(9);
-        doc.setTextColor(107, 114, 128);
-        doc.text("TOTAL REVENUE", 20, 55);
-        doc.text("TOTAL DONATIONS", 100, 55);
-        doc.text("AVERAGE (USD)", 150, 55);
-
-        doc.setFontSize(11);
-        doc.setTextColor(17, 24, 39);
-        doc.text(`USD: $${dynamicStats.usdRevenue.toLocaleString()}`, 20, 63);
-        if (dynamicStats.inrRevenue > 0) {
-            doc.text(`INR: Rs. ${dynamicStats.inrRevenue.toLocaleString()}`, 20, 70);
+                new Date(d.createdAt).toLocaleString(),
+                d.transactionId || '-'
+            ]);
+            fileName = `donations_${new Date().toISOString().split('T')[0]}.csv`;
         }
-        
-        doc.setFontSize(14);
-        doc.text(`${filtered.length}`, 100, 65);
-        
-        const checkINR = (d: any) => d.paymentMethod === 'BANK_TRANSFER' || d.currency === 'INR' || d.currency === '₹';
-        const avgUsd = filtered.filter(d => !checkINR(d) && d.status === 'completed');
-        const avgUsdVal = avgUsd.length > 0 ? dynamicStats.usdRevenue / avgUsd.length : 0;
-        doc.text(`$${avgUsdVal.toFixed(2)}`, 150, 65);
 
-        autoTable(doc, {
-            startY: 90,
-            head: [['Donor', 'Amount', 'Status', 'Source', 'Payment', 'Date']],
-            body: filtered.map(d => [
-                d.name,
-                `${checkINR(d) ? 'Rs. ' : '$'}${d.amount.toLocaleString()}`,
-                d.status.toUpperCase(),
-                d.source,
-                d.paymentMethod || 'UNKNOWN',
-                new Date(d.createdAt).toLocaleDateString()
-            ]),
-            styles: { fontSize: 8, cellPadding: 4 },
-            headStyles: { fillColor: [17, 24, 39], textColor: [255, 255, 255], fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: [250, 250, 250] },
-            margin: { top: 85 }
-        });
+        const csvContent = [
+            headers.join(','),
+            ...dataRows.map(row => row.map(escapeCSV).join(','))
+        ].join('\n');
 
-        doc.save(`foundation_report_${now.toISOString().split('T')[0]}.pdf`);
-        toast.success("PDF Report generated!");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`${isRegistrationTab ? 'Registrations' : 'CSV'} exported successfully!`);
     };
 
     const handleLogout = () => { logout(); navigate('/admin/login', { replace: true }); };
@@ -551,19 +602,19 @@ const AdminDashboard = () => {
     };
 
     const handleTabChangeMobile = (id: Tab) => {
-        setTab(id);
+        handleTabChange(id);
         setIsSidebarOpen(false);
     };
 
-    const SidebarContent = ({ onSelect = setTab }: { onSelect?: (id: Tab) => void }) => (
+    const SidebarContent = ({ onSelect = handleTabChange }: { onSelect?: (id: Tab) => void }) => (
         <>
             <div className="p-6 border-b border-gray-50 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center shrink-0 shadow-sm text-white">
-                    <LayoutDashboard size={16} />
+                <div className="w-10 h-10 rounded-xl bg-transparent flex items-center justify-center shrink-0">
+                    <img src={MEDIA.brand.logo} alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                    <h1 className="text-sm font-black text-gray-900 leading-none">Donation Intel</h1>
-                    <p className="text-[10px] text-gray-400 font-medium mt-1 uppercase tracking-widest">Patel Foundation</p>
+                    <h1 className="text-sm font-black text-gray-900 leading-none">Patel Foundation</h1>
+                    <p className="text-[10px] text-gray-400 font-medium mt-1 uppercase tracking-widest">Admin Dashboard</p>
                 </div>
             </div>
 
@@ -571,6 +622,7 @@ const AdminDashboard = () => {
                 {MENU_ITEMS.map(({ id, label, icon: Icon }) => {
                     let badgeCount = 0;
                     if (id === 'transactions') badgeCount = countsByType.DONATION || 0;
+                    if (id === 'registrations') badgeCount = countsByType.REGISTRATION || 0;
                     if (id === 'inquiries') badgeCount = countsByType.INQUIRY || 0;
                     if (id === 'contacts') badgeCount = countsByType.CONTACT || 0;
                     if (id === 'newsletter') badgeCount = countsByType.NEWSLETTER || 0;
@@ -653,10 +705,8 @@ const AdminDashboard = () => {
                         <Menu size={24} />
                     </button>
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white">
-                            <LayoutDashboard size={14} />
-                        </div>
-                        <span className="font-black text-gray-900 text-sm tracking-tight text-right">Intel Dashboard</span>
+                        <img src={MEDIA.brand.logo} alt="Logo" className="w-7 h-7 object-contain" />
+                        <span className="font-black text-gray-900 text-sm tracking-tight text-right">Patel Admin</span>
                     </div>
                 </div>
 
@@ -744,11 +794,13 @@ const AdminDashboard = () => {
                                                                             <div className="flex gap-3">
                                                                                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
                                                                                     notif.type === 'DONATION' ? 'bg-emerald-50 text-emerald-600' : 
+                                                                                    notif.type === 'REGISTRATION' ? 'bg-orange-50 text-orange-600' : 
                                                                                     notif.type === 'INQUIRY' ? 'bg-blue-50 text-blue-600' : 
                                                                                     notif.type === 'NEWSLETTER' ? 'bg-purple-50 text-purple-600' :
                                                                                     'bg-gray-50 text-gray-600'
                                                                                 }`}>
                                                                                     {notif.type === 'DONATION' ? <DollarSign size={16} /> : 
+                                                                                     notif.type === 'REGISTRATION' ? <Ticket size={16} /> : 
                                                                                      notif.type === 'INQUIRY' ? <Mail size={16} /> : 
                                                                                      notif.type === 'NEWSLETTER' ? <Send size={16} /> : 
                                                                                      <Bell size={16} />}
@@ -812,11 +864,9 @@ const AdminDashboard = () => {
                             <Plus size={14} /> Add Transaction
                         </button>
                         <div className="flex border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white shrink-0">
-                            <button onClick={exportCSV} className="p-2.5 bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-100" title="CSV">
+                            <button onClick={exportCSV} className="p-2.5 bg-white text-gray-600 hover:bg-gray-50 flex items-center gap-2" title="Export CSV">
                                 <Download size={16} />
-                            </button>
-                            <button onClick={exportPDF} className="p-2.5 bg-white text-gray-600 hover:bg-gray-50" title="PDF Report">
-                                <Shield size={16} className="text-emerald-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest pr-2">Export CSV</span>
                             </button>
                         </div>
                     </div>
@@ -847,7 +897,15 @@ const AdminDashboard = () => {
 
                                     <KpiCard label="Unique Donors" value={dynamicStats.donors.toString()} sub="filtered supporters" icon={Users} color="bg-blue-50 text-blue-600" />
                                     
-                                    <div className="grid grid-cols-2 gap-4 lg:col-span-2">
+                                    <KpiCard 
+                                        label="Event Registrations" 
+                                        value={(stats?.totalRegistrations ?? 0).toString()} 
+                                        sub={`${stats?.completedRegistrations ?? 0} confirmed seats`} 
+                                        icon={Ticket} 
+                                        color="bg-orange-50 text-orange-600" 
+                                    />
+
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Pending</span>
@@ -1172,7 +1230,112 @@ const AdminDashboard = () => {
                             </motion.div>
                         )}
 
-                        {/* ═══ TOP DONORS ═════════════════════════════════════════ */}
+                        {/* ═══ REGISTRATIONS ═════════════════════════════════════ */}
+                        {tab === 'registrations' && (
+                            <motion.div key="reg" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                                    <h2 className="font-black text-gray-900 text-xl">Event Registrations</h2>
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative">
+                                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input 
+                                                placeholder="Search registrants..." 
+                                                value={search} 
+                                                onChange={e => setSearch(e.target.value)}
+                                                className="pl-9 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-xs focus:ring-2 focus:ring-black/5 outline-none font-bold"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead>
+                                                <tr className="border-b border-gray-50 bg-gray-50/40">
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Registrant</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Contact</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Tickets</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Amount</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Status</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Preferences</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {registrations.length === 0 ? (
+                                                    <tr><td colSpan={6} className="py-20 text-center text-gray-300 italic font-medium">No registrations found 🎟️</td></tr>
+                                                ) : registrations.filter(r => 
+                                                    r.fullName.toLowerCase().includes(search.toLowerCase()) || 
+                                                    r.email.toLowerCase().includes(search.toLowerCase()) ||
+                                                    (r.phone && r.phone.includes(search))
+                                                ).map((reg) => (
+                                                    <tr key={reg._id} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-black">
+                                                                    {reg.fullName.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div className="font-black text-gray-900">{reg.fullName}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col">
+                                                                <div className="text-xs font-bold text-gray-700">{reg.email}</div>
+                                                                <div className="text-[10px] text-gray-400 font-bold">{reg.phone || '—'}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-gray-900">{reg.ticketType}</span>
+                                                                <span className="text-[10px] text-gray-400">+{reg.guests} Guests</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="font-black text-gray-900">
+                                                                {reg.currency === 'INR' ? '₹' : '$'}{reg.amount.toLocaleString()}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4"><StatusBadge status={reg.status} /></td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex gap-1">
+                                                                {reg.volunteer && <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[8px] font-black uppercase tracking-widest border border-blue-100">Volunteer</span>}
+                                                                {reg.donationInterest && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest border border-emerald-100">Donor</span>}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-[10px] text-gray-400 font-medium">
+                                                                <div className="flex items-center justify-end gap-1">
+                                                                    <button 
+                                                                        onClick={() => setSelectedRegistration(reg)}
+                                                                        className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-all"
+                                                                        title="View full details"
+                                                                    >
+                                                                        <Eye size={14} />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => { setEditingRegistration(reg); setShowRegistrationEditForm(true); }}
+                                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                        title="Edit registration"
+                                                                    >
+                                                                        <Edit size={14} />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleDeleteRegistration(reg._id)}
+                                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                        title="Delete registration"
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
                         {tab === 'top-donors' && (
                             <motion.div key="td" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-5xl">
                                 <h2 className="font-black text-gray-900 text-xl mb-6">Top Donors <span className="text-gray-300 font-medium text-base">(by individual contribution)</span></h2>
@@ -1877,6 +2040,265 @@ const AdminDashboard = () => {
                                         <button 
                                             onClick={() => setShowInquiryDeleteModal(false)} 
                                             className="px-6 py-3.5 text-gray-400 font-black text-[10px] tracking-widest uppercase hover:text-black transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Registration Detail Modal ── */}
+                <AnimatePresence>
+                    {selectedRegistration && (
+                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedRegistration(null)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                                {/* Header */}
+                                <div className="p-8 sm:p-10 border-b border-gray-50 flex items-center justify-between shrink-0 bg-gray-50/30">
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center text-2xl font-black shadow-xl shadow-black/10">
+                                            {selectedRegistration.fullName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-gray-900 leading-tight">{selectedRegistration.fullName}</h2>
+                                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                                                <Ticket size={12} className="text-[#e08f24]" /> {selectedRegistration.ticketType} Admission
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedRegistration(null)} className="p-3 text-gray-300 hover:text-black hover:bg-white rounded-2xl transition-all shadow-sm"><X size={24} /></button>
+                                </div>
+
+                                {/* Body */}
+                                <div className="p-8 sm:p-10 overflow-y-auto space-y-10 custom-scrollbar">
+                                    {/* Primary Info Grid */}
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Email Address</label>
+                                            <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <Mail size={14} className="text-gray-300" /> {selectedRegistration.email}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Phone Number</label>
+                                            <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <Phone size={14} className="text-gray-300" /> {selectedRegistration.phone || 'Not Provided'}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">City / Origin</label>
+                                            <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <MapPin size={14} className="text-gray-300" /> {selectedRegistration.city || '—'}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Total Guests</label>
+                                            <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <Users size={14} className="text-gray-300" /> {selectedRegistration.guests} Person(s)
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Financial Info Box */}
+                                    <div className="bg-gray-50 rounded-[2rem] p-8 border border-gray-100 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-10"><DollarSign size={80} className="text-black" /></div>
+                                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Transaction Value</label>
+                                                <div className="text-4xl font-black text-gray-900">
+                                                    {selectedRegistration.currency === 'INR' ? '₹' : '$'}{selectedRegistration.amount.toLocaleString()}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:items-end gap-2">
+                                                <StatusBadge status={selectedRegistration.status} />
+                                                <div className="text-[10px] font-bold text-gray-400 font-mono tracking-tighter">REF: {selectedRegistration.transactionId || 'PENDING_PAYMENT'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Additional Interests */}
+                                    <div className="space-y-4">
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Donor Preferences</label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className={`p-5 rounded-2xl border flex items-center gap-4 transition-all ${selectedRegistration.volunteer ? 'bg-blue-50/50 border-blue-100' : 'bg-gray-50/30 border-gray-100 opacity-50'}`}>
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedRegistration.volunteer ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400'}`}>
+                                                    <Star size={16} />
+                                                </div>
+                                                <div>
+                                                    <div className={`text-xs font-black uppercase tracking-widest ${selectedRegistration.volunteer ? 'text-blue-900' : 'text-gray-400'}`}>Volunteer Interest</div>
+                                                    <div className="text-[10px] font-medium text-gray-500 mt-0.5">{selectedRegistration.volunteer ? 'Wants to help on-ground' : 'No interest stated'}</div>
+                                                </div>
+                                            </div>
+                                            <div className={`p-5 rounded-2xl border flex items-center gap-4 transition-all ${selectedRegistration.donationInterest ? 'bg-emerald-50/50 border-emerald-100' : 'bg-gray-50/30 border-gray-100 opacity-50'}`}>
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedRegistration.donationInterest ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-gray-200 text-gray-400'}`}>
+                                                    <TrendingUp size={16} />
+                                                </div>
+                                                <div>
+                                                    <div className={`text-xs font-black uppercase tracking-widest ${selectedRegistration.donationInterest ? 'text-emerald-900' : 'text-gray-400'}`}>Future Donor</div>
+                                                    <div className="text-[10px] font-medium text-gray-500 mt-0.5">{selectedRegistration.donationInterest ? 'Interested in recurring giving' : 'No interest stated'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer Action */}
+                                <div className="p-8 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between shrink-0">
+                                    <div className="text-[10px] font-bold text-gray-400">Registered on {new Date(selectedRegistration.createdAt).toLocaleString()}</div>
+                                    <div className="flex gap-3">
+                                        <a href={`mailto:${selectedRegistration.email}`} className="px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center gap-2">
+                                            <Mail size={14} /> Send Email
+                                        </a>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Event Registration Edit Modal ── */}
+                <AnimatePresence>
+                    {showRegistrationEditForm && editingRegistration && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRegistrationEditForm(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-lg rounded-[2rem] sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-100 max-h-[90vh] flex flex-col">
+                                <div className="p-6 sm:p-8 border-b border-gray-50 flex items-center justify-between bg-orange-50/30 shrink-0">
+                                    <div>
+                                        <h2 className="text-lg sm:text-xl font-black text-gray-900">Edit Event Registration</h2>
+                                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-1 uppercase tracking-widest">Update Attendee Record</p>
+                                    </div>
+                                    <button onClick={() => setShowRegistrationEditForm(false)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all"><XCircle size={20} /></button>
+                                </div>
+                                <form onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const fd = new FormData(e.currentTarget);
+                                    const data: any = Object.fromEntries(fd.entries());
+                                    // Handle checkboxes
+                                    data.volunteer = fd.get('volunteer') === 'on';
+                                    data.donationInterest = fd.get('donationInterest') === 'on';
+                                    data.amount = parseFloat(data.amount);
+                                    data.guests = parseInt(data.guests);
+                                    
+                                    try {
+                                        const res = await api.put(`/event-registration/${editingRegistration._id}`, data, { headers: authHeader });
+                                        if (res.data.success) {
+                                            toast.success("Registration updated successfully");
+                                            setShowRegistrationEditForm(false);
+                                            fetchAll(true);
+                                        }
+                                    } catch (err: any) {
+                                        toast.error(err.response?.data?.message || "Failed to update registration");
+                                    }
+                                }} className="p-6 sm:p-8 space-y-4 overflow-y-auto">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Name</label>
+                                            <input name="fullName" required defaultValue={editingRegistration.fullName} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Email</label>
+                                            <input name="email" type="email" required defaultValue={editingRegistration.email} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone</label>
+                                            <input name="phone" required defaultValue={editingRegistration.phone} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">City</label>
+                                            <input name="city" required defaultValue={editingRegistration.city} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Ticket Type</label>
+                                            <select name="ticketType" required defaultValue={editingRegistration.ticketType} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm">
+                                                <option value="Standard Seat">Standard Seat</option>
+                                                <option value="VIP Table">VIP Table</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Guests</label>
+                                            <input name="guests" type="number" min="0" required defaultValue={editingRegistration.guests} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Amount</label>
+                                            <input name="amount" type="number" step="0.01" required defaultValue={editingRegistration.amount} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-black text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Status</label>
+                                            <select name="status" required defaultValue={editingRegistration.status} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-bold text-sm">
+                                                <option value="completed">Completed</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="failed">Failed</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-6 py-2">
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <input type="checkbox" name="volunteer" defaultChecked={editingRegistration.volunteer} className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-900 transition-colors">Volunteer Interest</span>
+                                        </label>
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <input type="checkbox" name="donationInterest" defaultChecked={editingRegistration.donationInterest} className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-900 transition-colors">Donor Interest</span>
+                                        </label>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Message</label>
+                                        <textarea name="message" defaultValue={editingRegistration.message} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-black/5 outline-none font-medium text-sm min-h-[80px]" />
+                                    </div>
+                                    <button type="submit" className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/10 mt-2">
+                                        Update Registration
+                                    </button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Event Registration Delete Modal ── */}
+                <AnimatePresence>
+                    {showRegistrationDeleteModal && (
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRegistrationDeleteModal(false)} className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+                            <motion.div 
+                                initial={{ scale: 0.9, opacity: 0 }} 
+                                animate={{ scale: 1, opacity: 1 }} 
+                                exit={{ scale: 0.9, opacity: 0 }} 
+                                className="relative bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden border border-red-100"
+                            >
+                                <div className="p-8">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+                                            <Trash2 size={24} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-black text-gray-900">Delete Registration?</h2>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">This action is permanent</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <p className="text-xs text-gray-500 leading-relaxed mb-8">
+                                        Are you sure you want to remove this attendee from the event? This cannot be undone.
+                                    </p>
+
+                                    <div className="flex flex-col gap-2">
+                                        <button 
+                                            onClick={confirmDeleteRegistration}
+                                            className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-xs tracking-widest uppercase hover:bg-red-700 transition-all shadow-lg shadow-red-600/10"
+                                        >
+                                            Yes, Delete Forever
+                                        </button>
+                                        <button 
+                                            onClick={() => setShowRegistrationDeleteModal(false)} 
+                                            className="w-full py-4 text-gray-400 font-bold text-xs tracking-widest uppercase hover:text-gray-900 transition-colors"
                                         >
                                             Cancel
                                         </button>

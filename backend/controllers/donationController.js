@@ -1,4 +1,5 @@
 const Donation = require('../models/Donation');
+const EventRegistration = require('../models/EventRegistration');
 
 /**
  * @desc Get all donations
@@ -20,7 +21,11 @@ const getDonations = async (req, res) => {
  */
 const getDonationStats = async (req, res) => {
     try {
-        const donations = await Donation.find().sort({ createdAt: -1 });
+        const [donations, registrations] = await Promise.all([
+            Donation.find().sort({ createdAt: -1 }),
+            EventRegistration.find().sort({ createdAt: -1 })
+        ]);
+
         const completed = donations.filter(d => d.status === 'completed');
         const totalAmount = completed.reduce((sum, d) => sum + d.amount, 0);
         const avgDonation = completed.length > 0 ? totalAmount / completed.length : 0;
@@ -46,8 +51,6 @@ const getDonationStats = async (req, res) => {
             });
         }
 
-        console.log(`[Stats Engine] Trend generated: ${trend.length} months. Total Revenue In Window: ${trend.reduce((s,t) => s+t.revenue, 0)}`);
-
         // Status breakdown
         const statusBreakdown = {
             completed: donations.filter(d => d.status === 'completed').length,
@@ -70,6 +73,10 @@ const getDonationStats = async (req, res) => {
                 trend,
                 statusBreakdown,
                 sourceBreakdown: sourceMap,
+                // Add registration stats
+                totalRegistrations: registrations.length,
+                completedRegistrations: registrations.filter(r => r.status === 'completed').length,
+                pendingRegistrations: registrations.filter(r => r.status === 'pending').length,
             },
         });
     } catch (error) {

@@ -6,15 +6,20 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { Heart } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const FloatingDonate = () => {
   const { scrollY } = useScroll();
   const [visible, setVisible] = useState(false);
+  const location = useLocation();
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setVisible(latest > 500);
   });
+
+  // Hide on event registration and contact pages as requested
+  const excludedPaths = ['/event', '/contact'];
+  if (excludedPaths.includes(location.pathname)) return null;
 
   return (
     <AnimatePresence>

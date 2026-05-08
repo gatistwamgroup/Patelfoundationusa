@@ -49,9 +49,14 @@ const SuccessPage = () => {
         capturePayment();
     }, [token]);
 
+    const isRegistration = details?.type === 'REGISTRATION';
+
     return (
         <div className="min-h-screen bg-[#FDFBF7] font-sans selection:bg-primary/20">
-            <SEO title="Donation Successful | Patel Foundation" description="Thank you for your generous gift. Your support changes lives." />
+            <SEO 
+                title={isRegistration ? "Registration Successful | Patel Foundation" : "Donation Successful | Patel Foundation"} 
+                description={isRegistration ? "You are successfully registered for our upcoming event." : "Thank you for your generous gift. Your support changes lives."} 
+            />
             <Navbar />
             
             <main className="container mx-auto px-6 py-32 flex flex-col items-center justify-center min-h-[80vh]">
@@ -62,7 +67,7 @@ const SuccessPage = () => {
                         className="flex flex-col items-center gap-6"
                     >
                         <Loader2 className="w-12 h-12 animate-spin text-primary opacity-30" />
-                        <h2 className="text-2xl font-serif text-gray-700">Verifying your donation...</h2>
+                        <h2 className="text-2xl font-serif text-gray-700">Verifying your {isRegistration ? 'registration' : 'donation'}...</h2>
                         <p className="text-gray-400 text-sm font-medium tracking-widest uppercase">Secured by PayPal Gateway</p>
                     </motion.div>
                 )}
@@ -77,9 +82,15 @@ const SuccessPage = () => {
                             <CheckCircle2 className="w-12 h-12 text-green-500" />
                         </div>
                         
-                        <h1 className="text-4xl md:text-5xl font-serif mb-4 text-black">Thank you so much!</h1>
+                        <h1 className="text-4xl md:text-5xl font-serif mb-4 text-black">
+                            {isRegistration ? "You're all set!" : "Thank you so much!"}
+                        </h1>
                         <p className="text-gray-500 mb-10 leading-relaxed">
-                            Your generous gift has been securely processed. We've sent a detailed receipt to <span className="font-bold text-black opacity-80">{details?.payer?.email_address || "your email"}</span>.
+                            {isRegistration 
+                                ? `Your registration has been confirmed. We've sent your entry details to `
+                                : `Your generous gift has been securely processed. We've sent a detailed receipt to `
+                            }
+                            <span className="font-bold text-black opacity-80">{details?.payer?.email_address || "your email"}</span>.
                         </p>
 
                         <div className="w-full grid grid-cols-2 gap-4 mb-10 text-left">
@@ -88,14 +99,16 @@ const SuccessPage = () => {
                                 <span className="text-xs font-mono font-bold text-black/50 truncate">#{token?.slice(0, 10)}...</span>
                             </div>
                             <div className="bg-gray-50 p-4 rounded-2xl">
-                                <span className="block text-[10px] uppercase font-black text-gray-400 mb-1 tracking-widest">Impact Status</span>
-                                <span className="text-xs font-bold text-green-600 flex items-center gap-1"><Heart size={12} /> Live</span>
+                                <span className="block text-[10px] uppercase font-black text-gray-400 mb-1 tracking-widest">Status</span>
+                                <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+                                    <CheckCircle2 size={12} /> Confirmed
+                                </span>
                             </div>
                         </div>
 
                         <div className="w-full flex flex-col gap-4">
-                            <Link to="/" className="w-full py-5 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-neutral-800 transition-all shadow-xl shadow-black/10">
-                                <span>Return to Mission Hub</span>
+                            <Link to={isRegistration ? "/event" : "/"} className="w-full py-5 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-neutral-800 transition-all shadow-xl shadow-black/10">
+                                <span>{isRegistration ? "View Event Details" : "Return to Mission Hub"}</span>
                                 <ArrowRight size={18} />
                             </Link>
                         </div>

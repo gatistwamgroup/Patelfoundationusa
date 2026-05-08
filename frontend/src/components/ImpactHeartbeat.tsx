@@ -35,8 +35,8 @@ const ImpactHeartbeat = () => {
         };
     }, []);
 
-    // Never render on the donate page (checked after all hooks)
-    if (pathname === '/donate') return null;
+    // Never render on the donate or event page (checked after all hooks)
+    if (pathname === '/donate' || pathname === '/event') return null;
 
     return (
         <AnimatePresence>

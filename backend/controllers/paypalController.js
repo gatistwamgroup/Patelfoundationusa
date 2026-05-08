@@ -4,7 +4,8 @@ require("dotenv").config();
 const axios = require("axios");
 const https = require("https");
 const Donation = require("../models/Donation");
-const { sendDonationReceipt, sendAdminNotification } = require("../utils/emailService");
+const EventRegistration = require("../models/EventRegistration");
+const { sendDonationReceipt, sendAdminNotification, sendEventRegistrationReceipt, sendEventAdminNotification } = require("../utils/emailService");
 const { detectSource } = require("../utils/sourceDetector");
 
 // ─── Shared HTTPS agent (IPv4 + keepAlive) ─────────────────────────────────
@@ -371,37 +372,45 @@ const captureOrder = async (req, res) => {
 
             console.log(`[PayPal] Linking capture ${capture.id} to customId ${customId}`);
 
-            // First check if it's already marked as completed in DB to avoid duplicate emails
-            const existingDonation = await Donation.findOne({ customId: customId });
-
-            if (existingDonation && existingDonation.status === "completed") {
-                console.log(`[DB] Donation ${customId} is already marked COMPLETED in database.`);
-                // Return success without duplicating emails
-                return res.status(200).json(data);
+            // First check if it's already marked as completed in DB to avoid duplicate processing
+            if (customId.startsWith('PF_') || customId.startsWith('MAN_') || customId.startsWith('BT_')) {
+                const existingDonation = await Donation.findOne({ customId });
+                if (existingDonation && existingDonation.status === "completed") {
+                    console.log(`[DB] Donation ${customId} is already marked COMPLETED.`);
+                    return res.status(200).json(data);
+                }
+            } else if (customId.startsWith('EVT_')) {
+                const existingReg = await EventRegistration.findOne({ customId });
+                if (existingReg && existingReg.status === "completed") {
+                    console.log(`[DB] Event Registration ${customId} is already marked COMPLETED.`);
+                    return res.status(200).json(data);
+                }
             }
-
-            // Find and update the original pending record
-            const updatedDonation = await Donation.findOneAndUpdate(
-                { customId: customId },
-                {
-                    status: "completed",
-                    transactionId: capture.id,
-                    payerEmail: payer.email_address,
-                    payerName: payerName,
-                    // If PayPal user modified the amount (unlikely with fixed value), update it
-                    amount: parseFloat(capture.amount.value)
-                },
-                { returnDocument: 'after' }
-            );
 
             let finalDonation = null;
 
-            if (updatedDonation) {
-                console.log(`[DB] Success! Donation ${customId} marked COMPLETED`);
-                finalDonation = updatedDonation;
-            } else {
-                // Fallback: Create from scratch if customId not found (unlikely)
-                console.warn(`[DB] CustomId ${customId} not found. Creating new record.`);
+            // Find and update the original pending record
+            if (customId.startsWith('PF_') || customId.startsWith('MAN_') || customId.startsWith('BT_')) {
+                const updatedDonation = await Donation.findOneAndUpdate(
+                    { customId: customId },
+                    {
+                        status: "completed",
+                        transactionId: capture.id,
+                        payerEmail: payer.email_address,
+                        payerName: payerName,
+                        amount: parseFloat(capture.amount.value)
+                    },
+                    { returnDocument: 'after' }
+                );
+                if (updatedDonation) {
+                    console.log(`[DB] Success! Donation ${customId} marked COMPLETED`);
+                    finalDonation = updatedDonation;
+                }
+            }
+
+            if (!finalDonation && !customId.startsWith('EVT_')) {
+                // Fallback: Create donation from scratch if customId not found
+                console.warn(`[DB] CustomId ${customId} not found in Donation. Creating new record.`);
                 const fallbackOrigin = req.headers.origin || "";
                 let fallbackSource = "USA";
                 if (fallbackOrigin.toLowerCase().includes("india")) {
@@ -453,10 +462,50 @@ const captureOrder = async (req, res) => {
                 } catch (err) {
                     console.error("[Socket.io] Error creating/emitting notification:", err);
                 }
+            } else {
+                // HANDLE EVENT REGISTRATION
+                const registration = await EventRegistration.findOneAndUpdate(
+                    { customId: customId },
+                    { 
+                        status: "completed", 
+                        transactionId: capture.id 
+                    },
+                    { new: true }
+                );
+
+                if (registration) {
+                    console.log(`[DB] Event Registration ${customId} marked COMPLETED`);
+                    
+                    // Create Notification for Event
+                    try {
+                        const Notification = require('../models/Notification');
+                        const newNotif = await Notification.create({
+                            type: 'REGISTRATION',
+                            title: "Event Payment Confirmed",
+                            message: `${registration.fullName} confirmed payment for ${registration.ticketType} ($${registration.amount})`,
+                            isRead: false,
+                            data: {
+                                registrationId: registration._id.toString(),
+                                amount: registration.amount,
+                                ticketType: registration.ticketType
+                            }
+                        });
+
+                        if (io) io.emit('notification', newNotif);
+                    } catch (err) {
+                        console.error("[Socket.io] Notification error:", err);
+                    }
+
+                    // Send confirmation emails
+                    sendEventRegistrationReceipt(registration).catch(console.error);
+                    sendEventAdminNotification(registration).catch(console.error);
+                }
             }
         }
 
-        return res.status(200).json(data);
+        const customIdVal = data.purchase_units?.[0]?.payments?.captures?.[0]?.custom_id || data.purchase_units?.[0]?.custom_id || "";
+        const transactionType = customIdVal.startsWith('EVT_') ? 'REGISTRATION' : 'DONATION';
+        return res.status(200).json({ ...data, type: transactionType });
     } catch (error) {
         const errData = error.response?.data || error.message;
         console.error("[PayPal] Capture Error:", errData);
@@ -512,26 +561,60 @@ const handleWebhook = async (req, res) => {
         console.log(`[PayPal] Webhook received: ${eventType}`);
 
         if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
-            const query = resource.custom_id ? { customId: resource.custom_id } : { transactionId: resource.id };
-            await Donation.findOneAndUpdate(
-                query,
-                {
-                    status: "completed",
-                    transactionId: resource.id,
-                    payerEmail: resource.payer?.email_address,
-                    payerName: resource.payer?.name?.given_name
-                        ? `${resource.payer.name.given_name} ${resource.payer.name.surname || ""}`.trim()
-                        : (resource.payer?.name?.full_name || "")
-                },
-                { new: true }
-            );
-            console.log(`[DB] Transaction ${resource.id} marked COMPLETED via webhook linking ${resource.custom_id || 'direct id'}`);
+            const customId = resource.custom_id || "";
+            const transactionId = resource.id;
+
+            if (customId.startsWith('EVT_')) {
+                const reg = await EventRegistration.findOneAndUpdate(
+                    { customId },
+                    { status: "completed", transactionId },
+                    { new: true }
+                );
+                if (reg) {
+                    console.log(`[DB] Event Registration ${customId} marked COMPLETED via webhook`);
+                    // Realtime notification for admin
+                    try {
+                        const Notification = require('../models/Notification');
+                        const newNotif = await Notification.create({
+                            type: 'REGISTRATION',
+                            title: "Event Payment (Webhook)",
+                            message: `${reg.fullName} confirmed via Webhook`,
+                            isRead: false,
+                            data: { registrationId: reg._id.toString(), amount: reg.amount }
+                        });
+                        const io = req.app.get('io');
+                        if (io) io.emit('notification', newNotif);
+                    } catch (e) { console.error(e); }
+
+                    // Send confirmation emails
+                    sendEventRegistrationReceipt(reg).catch(console.error);
+                    sendEventAdminNotification(reg).catch(console.error);
+                }
+            } else {
+                // Donation
+                const query = customId ? { customId } : { transactionId };
+                await Donation.findOneAndUpdate(
+                    query,
+                    {
+                        status: "completed",
+                        transactionId,
+                        payerEmail: resource.payer?.email_address,
+                        payerName: resource.payer?.name?.given_name
+                            ? `${resource.payer.name.given_name} ${resource.payer.name.surname || ""}`.trim()
+                            : (resource.payer?.name?.full_name || "")
+                    },
+                    { new: true }
+                );
+                console.log(`[DB] Donation ${customId || 'direct'} marked COMPLETED via webhook`);
+            }
         } else if (eventType === "PAYMENT.CAPTURE.DENIED") {
-            const query = resource.custom_id ? { customId: resource.custom_id } : { transactionId: resource.id };
-            await Donation.findOneAndUpdate(
-                query,
-                { status: "failed" }
-            );
+            const customId = resource.custom_id || "";
+            if (customId.startsWith('EVT_')) {
+                await EventRegistration.findOneAndUpdate({ customId }, { status: "failed" });
+            } else {
+                const query = customId ? { customId } : { transactionId: resource.id };
+                await Donation.findOneAndUpdate(query, { status: "failed" });
+            }
             console.log(`[DB] Transaction ${resource.id} marked FAILED via webhook`);
         }
 
@@ -559,4 +642,151 @@ const warmToken = async (_req, res) => {
     }
 };
 
-module.exports = { initiateDonation, captureOrder, handleWebhook, warmToken };
+// ─── Controller: Initiate Event Payment ─────────────────────────────────────
+/**
+ * @desc  Creates a PayPal order for an existing event registration
+ * @route POST /api/paypal/initiate-event-payment
+ * @access Public
+ */
+const initiateEventPayment = async (req, res) => {
+    try {
+        const { registrationId } = req.body;
+
+        if (!registrationId) {
+            return res.status(400).json({ success: false, message: "Registration ID is required" });
+        }
+
+        const registration = await EventRegistration.findById(registrationId);
+        if (!registration) {
+            return res.status(404).json({ success: false, message: "Registration not found" });
+        }
+
+        if (registration.status === 'completed') {
+            return res.status(400).json({ success: false, message: "This registration is already completed and paid." });
+        }
+
+        const accessToken = await generateAccessToken();
+        const origin = req.headers.origin || req.headers.referer || process.env.FRONTEND_URL || "http://localhost:8080";
+        const baseUrl = origin.replace(/\/$/, "");
+
+        const orderPayload = {
+            intent: "CAPTURE",
+            purchase_units: [
+                {
+                    reference_id: registration.customId,
+                    custom_id: registration.customId,
+                    amount: {
+                        currency_code: "USD",
+                        value: registration.amount.toFixed(2),
+                    },
+                    description: `Event Tickets: ${registration.ticketType} (${registration.fullName})`,
+                },
+            ],
+            application_context: {
+                brand_name: "Patel Foundation",
+                landing_page: "LOGIN",
+                user_action: "PAY_NOW",
+                return_url: `${baseUrl}/success`,
+                cancel_url: `${baseUrl}/cancel`,
+            }
+        };
+
+        const orderResponse = await axios({
+            url: `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders`,
+            method: "POST",
+            headers: {
+                ...baseHeaders,
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            data: orderPayload,
+            httpsAgent,
+            timeout: 15_000,
+        });
+
+        console.log(`[PayPal] Event Order ${orderResponse.data.id} created for ${registration.customId}`);
+
+        return res.status(201).json({
+            id: orderResponse.data.id,
+            approvalUrl: orderResponse.data.links.find(l => l.rel === 'approve')?.href
+        });
+
+    } catch (error) {
+        const errData = error.response?.data || error.message;
+        console.error("[PayPal] Error initiating event payment:", errData);
+        return res.status(500).json({ success: false, message: "Failed to initiate event payment", error: errData });
+    }
+};
+
+// ─── Controller: Capture Event Order ──────────────────────────────────────────
+/**
+ * @desc  Captures event payment and updates registration to COMPLETED
+ * @route POST /api/paypal/capture-event-order
+ * @access Public
+ */
+const captureEventOrder = async (req, res) => {
+    try {
+        const { orderID } = req.body;
+        if (!orderID) return res.status(400).json({ success: false, message: "Order ID is required" });
+
+        const accessToken = await generateAccessToken();
+        console.log(`[PayPal] Capturing event order: ${orderID}`);
+
+        let data;
+        try {
+            const captureResponse = await axios({
+                url: `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders/${orderID}/capture`,
+                method: "POST",
+                headers: {
+                    ...baseHeaders,
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                httpsAgent,
+                timeout: 15_000,
+            });
+            data = captureResponse.data;
+        } catch (captureErr) {
+            if (captureErr.response?.status === 422) {
+                const getOrder = await axios({
+                    url: `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders/${orderID}`,
+                    method: "GET",
+                    headers: { ...baseHeaders, Authorization: `Bearer ${accessToken}` },
+                    httpsAgent,
+                });
+                data = getOrder.data;
+            } else throw captureErr;
+        }
+
+        if (data.status === "COMPLETED") {
+            const purchaseUnit = data.purchase_units[0];
+            const capture = purchaseUnit?.payments?.captures?.[0];
+            const customId = capture?.custom_id || purchaseUnit.custom_id;
+
+            if (customId) {
+                const registration = await EventRegistration.findOneAndUpdate(
+                    { customId },
+                    { 
+                        status: "completed", 
+                        transactionId: capture.id 
+                    },
+                    { new: true }
+                );
+
+                if (registration) {
+                    console.log(`[DB] Event Registration ${customId} marked COMPLETED`);
+                    // Send confirmation emails
+                    sendEventRegistrationReceipt(registration).catch(console.error);
+                    sendEventAdminNotification(registration).catch(console.error);
+                }
+            }
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        console.error("[PayPal] Event Capture Error:", error.response?.data || error.message);
+        return res.status(500).json({ success: false, message: "Failed to capture event payment" });
+    }
+};
+
+module.exports = { initiateDonation, captureOrder, handleWebhook, warmToken, initiateEventPayment, captureEventOrder };

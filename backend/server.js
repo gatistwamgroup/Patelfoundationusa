@@ -29,6 +29,7 @@ const newsletterRoutes = require('./routes/newsletterRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const emailLogRoutes = require('./routes/emailLogRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const eventRegistrationRoutes = require('./routes/eventRegistrationRoutes');
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -44,6 +45,7 @@ app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/logs', emailLogRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/event-registration', eventRegistrationRoutes);
 // Alias for clients that use the singular donation endpoint path
 app.use('/api/donation', donationRoutes);
 

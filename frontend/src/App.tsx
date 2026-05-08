@@ -31,6 +31,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const Success = lazy(() => import("./pages/Success"));
 const Cancel = lazy(() => import("./pages/Cancel"));
+const EventRegistration = lazy(() => import("./pages/EventRegistration"));
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -74,6 +75,7 @@ const router = createBrowserRouter([
       { path: "get-involved", element: <GetInvolved /> },
       { path: "gallery", element: <Gallery /> },
       { path: "donate", element: <Donate /> },
+      { path: "event", element: <EventRegistration /> },
       { path: "success", element: <Success /> },
       { path: "cancel", element: <Cancel /> },
       { path: "contact", element: <Contact /> },
