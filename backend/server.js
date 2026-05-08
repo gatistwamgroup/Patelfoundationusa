@@ -83,6 +83,22 @@ io.on('connection', (socket) => {
 // Export io globally for controllers to use
 app.set('io', io);
 
+// --- KEEP ALIVE MECHANISM (Render Free Tier) ---
+const https = require('https');
+const SELF_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
+
+// Self-ping every 14 minutes to prevent sleep
+setInterval(() => {
+  if (process.env.NODE_ENV === 'production' && process.env.BACKEND_URL) {
+    console.log('[Keep-Alive] Pinging self to stay awake...');
+    https.get(process.env.BACKEND_URL, (res) => {
+      console.log(`[Keep-Alive] Status: ${res.statusCode}`);
+    }).on('error', (err) => {
+      console.error(`[Keep-Alive] Error: ${err.message}`);
+    });
+  }
+}, 14 * 60 * 1000); 
+
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
