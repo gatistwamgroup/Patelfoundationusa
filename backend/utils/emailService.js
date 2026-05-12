@@ -389,7 +389,7 @@ const sendEventRegistrationReceipt = async (registration) => {
   const eventLocation = "The Grand Ballroom, NY";
   const dateFormatted = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const amountFormatted = typeof amount === 'number' ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : amount;
-  const frontendUrl = process.env.FRONTEND_URL || 'https://patelfoundationusa.org';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://mypatelfoundation.org';
 
   const transporter = createTransporter();
   const mailOptions = {
@@ -529,7 +529,7 @@ const sendEventAdminNotification = async (registration) => {
   const { fullName, email, phone, ticketType, guests, amount, customId, currency = 'USD' } = registration;
   const date = new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const amountFormatted = typeof amount === 'number' ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : amount;
-  const frontendUrl = process.env.FRONTEND_URL || 'https://patelfoundationusa.org';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://mypatelfoundation.org';
 
   const transporter = createTransporter();
   const mailOptions = {

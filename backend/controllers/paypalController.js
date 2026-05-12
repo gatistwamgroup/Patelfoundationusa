@@ -231,6 +231,12 @@ const initiateDonation = async (req, res) => {
         const successPath = (source === "INDIA") ? "/donation-success" : "/success";
         const cancelPath = (source === "INDIA") ? "/donation-cancel" : "/cancel";
 
+        const return_url = `${baseUrl}${successPath}`;
+        const cancel_url = `${baseUrl}${cancelPath}`;
+
+        console.log(`[PayPal] Configured return_url: ${return_url} (Source: ${source})`);
+        console.log(`[PayPal] Configured cancel_url: ${cancel_url}`);
+
         const accessToken = await generateAccessToken();
 
         const orderPayload = {
@@ -250,8 +256,8 @@ const initiateDonation = async (req, res) => {
                 brand_name: "Patel Foundation",
                 landing_page: "LOGIN",
                 user_action: "PAY_NOW",
-                return_url: `${baseUrl}${successPath}`,
-                cancel_url: `${baseUrl}${cancelPath}`,
+                return_url: return_url,
+                cancel_url: cancel_url,
             }
         };
 
@@ -690,6 +696,8 @@ const initiateEventPayment = async (req, res) => {
                 cancel_url: `${baseUrl}/cancel`,
             }
         };
+
+        console.log(`[PayPal] Event Order return_url: ${baseUrl}/success`);
 
         const orderResponse = await axios({
             url: `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders`,
