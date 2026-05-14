@@ -13,7 +13,7 @@ const FounderLetter = () => {
                         <div className="relative">
                             <div className="relative z-10 aspect-[4/5] rounded-[3rem] overflow-hidden shadow-2xl">
                                 <img
-                                    src="assets/fl.png"
+                                    src="/assets/fl.webp"
                                     alt="Kunj Patel in Kavitha"
                                     className="w-full h-full object-cover grayscale-[20%] hover:grayscale-0 transition-all duration-1000"
                                 />

@@ -145,7 +145,7 @@ const Contact = () => {
                                 className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden group shadow-2xl"
                             >
                                 <img 
-                                    src="assets/contact.png" 
+                                    src="/assets/contact.webp" 
                                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
                                     alt="Kavitha Village"
                                 />
