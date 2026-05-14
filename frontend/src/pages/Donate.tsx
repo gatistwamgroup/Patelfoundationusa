@@ -12,10 +12,10 @@ import { MEDIA } from '@/data/media';
 import { toast } from 'sonner';
 
 // Proper asset imports for production builds
-import imgPt9 from '@/assets/pt9.jpg';
-import imgPt1 from '@/assets/pt1.jpeg';
-import imgP13 from '@/assets/p13.jpeg';
-import imgPt5 from '@/assets/pt5.jpg';
+import imgPt9 from '@/assets/pt9.webp';
+import imgPt1 from '@/assets/pt1.webp';
+import imgP13 from '@/assets/p13.webp';
+import imgPt5 from '@/assets/pt5.webp';
 
 const impactGallery = [
     {

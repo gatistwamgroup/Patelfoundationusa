@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import communityImage from '@/assets/community-hero.jpg';
+import communityImage from '@/assets/community-hero.webp';
 import HandwrittenNote from './HandwrittenNote';
 
 const Char = ({ children, progress, range }: { children: string; progress: MotionValue<number>; range: [number, number] }) => {

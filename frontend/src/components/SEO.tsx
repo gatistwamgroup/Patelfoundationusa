@@ -89,7 +89,7 @@ const SEO = ({
             "@type": "NGO",
             "name": "Patel Foundation (USA)",
             "url": siteUrl,
-            "logo": `${siteUrl}/assets/patel-foundation-logo.png`,
+            "logo": `${siteUrl}/assets/patel-foundation-logo.webp`,
             "description": "A US-based 501(c)(3) nonprofit empowering communities through education, healthcare, and sustainable development.",
             "taxID": "XX-XXXXXXX", // User should provide actual EIN if available
             "address": {

@@ -7,15 +7,18 @@ import {
     Globe, ShieldCheck, Users, Target, ChevronDown
 } from 'lucide-react';
 import { MEDIA } from '@/data/media';
-import aboutBg from '@/assets/bg.png';
+import aboutBg from '@/assets/bg.webp';
 
 // Team member image imports (proper imports so Vite bundles them for production)
-import imgJigneshPatel from '@/assets/img/jignesh-patel.png';
-import imgShreyaPatel from '@/assets/img/shreya-patel.png';
-import imgDeepalMacwan from '@/assets/img/deepal-macwan.png';
-import imgHiralMacwan from '@/assets/img/hiral-macwan.png';
-import imgSejalPanchal from '@/assets/img/Sejal-panchal.png';
-import imgParthPatel from '@/assets/img/parth-patel.png';
+import imgJigneshPatel from '@/assets/img/jignesh-patel.webp';
+import imgShreyaPatel from '@/assets/img/shreya-patel.webp';
+import imgDeepalMacwan from '@/assets/img/deepal-macwan.webp';
+import imgHiralMacwan from '@/assets/img/hiral-macwan.webp';
+import imgSejalPanchal from '@/assets/img/Sejal-panchal.webp';
+import imgParthPatel from '@/assets/img/parth-patel.webp';
+import imgKush from '@/assets/img/kush.webp';
+import imgMonica from '@/assets/img/monica.webp';
+import imgDarshan from '@/assets/img/darshan.webp';
 
 // --- HELPERS ---
 
@@ -87,9 +90,10 @@ const VALUES = [
 ];
 
 const TEAM = [
-    { name: "Kunj Patel", role: "Founder & Chairman", img: "" },
-    { name: "Monika Patel", role: "Global CEO", img: "" },
-    { name: "Jignes Patel", role: "Head of Operations", img: imgJigneshPatel },
+    { name: "Kush Patel", role: "Founder & Chairman", img: imgKush },
+    { name: "Monica Patel", role: "Global CEO", img: imgMonica },
+    { name: "Darshan Patel", role: "Director", img: imgDarshan },
+    { name: "Jignesh Patel", role: "Head of Operations", img: imgJigneshPatel },
     { name: "Shreya Patel", role: "Treasurer", img: imgShreyaPatel },
     { name: "Deepak Macwan", role: "Treasurer", img: imgDeepalMacwan },
     { name: "Hiral Macwan", role: "Treasurer", img: imgHiralMacwan },
@@ -167,9 +171,9 @@ const About = () => {
 
     return (
         <main className="w-full bg-[#FAFAF8] text-slate-900 font-sans selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden relative">
-            <SEO 
-                title="Our Story & Mission | US-Based 501(c)(3) Charity" 
-                description="Discover how the Patel Foundation bridges the US and India to provide education, health, and joy to rural communities. Learn about our 100% transparency model." 
+            <SEO
+                title="Our Story & Mission | US-Based 501(c)(3) Charity"
+                description="Discover how the Patel Foundation bridges the US and India to provide education, health, and joy to rural communities. Learn about our 100% transparency model."
                 keywords="About Patel Foundation, NGO History, US-India Charity, Kunj Patel, 501c3 Nonprofit Mission, Global Seva"
             />
 
@@ -280,7 +284,7 @@ const About = () => {
                         {/* Sticky Image (Desktop) */}
                         <div className="hidden lg:block">
                             <div className="sticky top-32 h-[80vh] w-full rounded-2xl overflow-hidden shadow-2xl">
-                                <img src={MEDIA.team.founder} className="w-full h-full object-cover" alt="Visionary" />
+                                <img src={imgKush} className="w-full h-full object-cover" alt="Kush Patel" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-12">
                                     <p className="text-white text-3xl font-serif">"We are the architects of our own future."</p>
                                     <p className="text-white/70 mt-4 uppercase tracking-widest text-sm">— Kunj Patel</p>
@@ -291,7 +295,7 @@ const About = () => {
                         {/* Mobile Founder Image */}
                         <div className="lg:hidden mb-8">
                             <div className="relative h-[50vh] w-full rounded-2xl overflow-hidden shadow-2xl">
-                                <img src={MEDIA.team.founder} className="w-full h-full object-cover" alt="Visionary" />
+                                <img src={imgKush} className="w-full h-full object-cover" alt="Kush Patel" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-8">
                                     <p className="text-white text-2xl font-serif">"We are the architects of our own future."</p>
                                     <p className="text-white/70 mt-2 uppercase tracking-widest text-xs">— Kunj Patel</p>

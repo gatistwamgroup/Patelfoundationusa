@@ -10,7 +10,7 @@ const programs = [
     title: 'Education',
     category: '',
     description: 'Bridging the gap regarding talent and opportunity through digital literacy.',
-    image: "/assets/pt10.jpg",
+    image: "/assets/pt10.webp",
     color: 'from-blue-900 to-blue-800'
   },
   {
@@ -34,7 +34,7 @@ const programs = [
     title: 'Relief',
     category: 'Emergency',
     description: 'Rapid response teams for disaster aid and local relief.',
-    image: "/assets/relief.jpg",
+    image: "/assets/relief.webp",
     color: 'from-emerald-900 to-emerald-800'
   },
   {
@@ -42,7 +42,7 @@ const programs = [
     title: 'Community Joy',
     category: 'Activities',
     description: 'Sunday picnics and youth activities that build lasting community bonds.',
-    image: "/assets/pt2.jpeg",
+    image: "/assets/pt2.webp",
     color: 'from-indigo-900 to-indigo-800'
   }
 ];

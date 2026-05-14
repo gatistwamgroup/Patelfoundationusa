@@ -14,7 +14,7 @@ const programs = [
         title: 'Education',
         subtitle: 'Empowering Minds',
         icon: BookOpen,
-        image: "/assets/p14.jpeg",
+        image: "/assets/p14.webp",
         description: 'We believe education is the catalyst for global change. Our comprehensive scholarship programs and digital infrastructure projects ensure no child is left behind due to financial constraints.',
         stats: [
             { label: 'Childrens', value: '800+' },
@@ -26,7 +26,7 @@ const programs = [
         title: 'Healthcare',
         subtitle: 'Saving Lives',
         icon: Heart,
-        image: "/assets/p13.jpeg",
+        image: "/assets/p13.webp",
         description: 'Bringing essential medical services to the most remote corners of the world. From mobile surgical units to specialized eye care camps, we bridge the gap in healthcare accessibility.',
         stats: [
             { label: 'Patients', value: '600+' },
@@ -38,7 +38,7 @@ const programs = [
         title: 'Nutritious Food',
         subtitle: 'Food Security',
         icon: Wheat,
-        image: "/assets/p11.jpg",
+        image: "/assets/p11.webp",
         description: 'Providing access to healthy and nutritious food for vulnerable communities. We establish food banks and nutritional programs to combat hunger and promote well-being.',
         stats: [
             { label: 'Meals Served', value: '10k+' },
@@ -50,7 +50,7 @@ const programs = [
         title: 'Empowerment',
         subtitle: 'Skill Development',
         icon: Users,
-        image: "/assets/emp.jpg",
+        image: "/assets/emp.webp",
         description: 'Fostering economic independence and female leadership through microfinance, vocational training, and artisan cooperatives. We help communities build sustainable livelihoods.',
         stats: [
             { label: 'Youth Trained', value: '40+' },
@@ -62,7 +62,7 @@ const programs = [
         title: 'Relief',
         subtitle: 'Crisis Response',
         icon: Globe,
-        image: "/assets/relief.jpg",
+        image: "/assets/relief.webp",
         description: 'Providing rapid, dignified aid during natural disasters. We remain on the ground long after the cameras leave to ensure complete rehabilitation of affected families.',
         stats: [
             { label: 'Aid Distributed', value: '200+' },

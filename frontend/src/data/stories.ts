@@ -14,7 +14,7 @@ export const stories = [
             <p>"We knew we couldn't wait for the situation to normalize," explained one of our local coordinators. "Hunger doesn't wait. We used our existing school bus networks to transport tonnes of raw food materials directly into the most affected rural districts."</p>
             <p>Over the course of three months, our incredible team of volunteers worked day and night, ensuring that over 10,000 households received their essential kits safely right at their doorsteps.</p>
         `,
-        image: "/assets/relief.jpg" // Placeholder image
+        image: "/assets/relief.webp" // Placeholder image
     },
 
 
@@ -43,7 +43,7 @@ export const stories = [
 
             <p>The smiles on their faces—seeing clearly for the first time in a decade—reminded us exactly why we do this work. It wasn't just about healthcare; it was about restoring dignity, independence, and joy to the village.</p>
         `,
-        image: "/assets/pp12.jpeg" // Main thumbnail image
+        image: "/assets/pp12.webp" // Main thumbnail image
     },
     {
         id: 5,
@@ -59,7 +59,7 @@ export const stories = [
             <p>"Having a teacher explain math concepts slowly in the evening changed everything for my daughter," shares a grateful mother from Kavitha. Over 500 children are now enrolled across three villages, and the improvement in academic performance has been astounding.</p>
             <p>Our volunteers don't just teach the curriculum; they inspire confidence, foster curiosity, and show these resilient students that their dreams are within reach.</p>
         `,
-        image: "/assets/pt8.jpeg"
+        image: "/assets/pt8.webp"
     },
     {
         id: 6,
@@ -74,7 +74,7 @@ export const stories = [
             <p>Last winter, we organized our largest <strong>Educational Picnic</strong>, taking over 300 students on a trip to regional science centers, historical sites, and sprawling botanical gardens. For many of these children, it was their first time traveling outside their village district.</p>
             <p>The air was filled with laughter, songs, and endless questions. These outings not only strengthen the bond between students and mentors but also gently expose them to the vastness of the world, sparking curiosity and immense joy.</p>
         `,
-        image: "/assets/p18.png"
+        image: "/assets/p18.webp"
     },
     {
         id: 7,

@@ -32,6 +32,8 @@ const Gallery = lazy(() => import("./pages/Gallery"));
 const Success = lazy(() => import("./pages/Success"));
 const Cancel = lazy(() => import("./pages/Cancel"));
 const EventRegistration = lazy(() => import("./pages/EventRegistration"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -81,6 +83,8 @@ const router = createBrowserRouter([
       { path: "cancel", element: <Cancel /> },
       { path: "donation-cancel", element: <Cancel /> },
       { path: "contact", element: <Contact /> },
+      { path: "privacy", element: <Privacy /> },
+      { path: "terms", element: <Terms /> },
       { path: "*", element: <NotFound /> },
     ],
   },

@@ -1,8 +1,8 @@
 // Replace the URLs below with your own image paths (e.g., imported assets or hosted URLs)
 // For local assets, you can import them at the top or put them in 'public/' folder and reference like '/images/logo.png'
 
-import logoImg from '@/assets/pflogo.png';
-import logoFullImg from '@/assets/patel-foundation-logo.png';
+import logoImg from '@/assets/pflogo.webp';
+import logoFullImg from '@/assets/patel-foundation-logo.webp';
 
 export const MEDIA = {
     brand: {

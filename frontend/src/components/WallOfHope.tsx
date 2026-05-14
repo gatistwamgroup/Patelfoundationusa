@@ -4,7 +4,7 @@ import HandwrittenNote from './HandwrittenNote';
 const items = [
     {
         id: 1,
-        image: "/assets/arya.png",
+        image: "/assets/arya.webp",
         note: "I want to be a teacher!",
         name: "Arya, 7",
         rotation: -3
@@ -18,14 +18,14 @@ const items = [
     },
     {
         id: 3,
-        image: "/assets/sneha.png",
+        image: "/assets/sneha.webp",
         note: "Thank you for the books!",
         name: "Sneha, 10",
         rotation: -1
     },
     {
         id: 4,
-        image: "/assets/vikram.png",
+        image: "/assets/vikram.webp",
         note: "I love our Sunday picnics.",
         name: "Vikram, 6",
         rotation: 4

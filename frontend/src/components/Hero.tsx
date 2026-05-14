@@ -9,10 +9,10 @@ import { MEDIA } from '@/data/media';
 import HandwrittenNote from './HandwrittenNote';
 
 const GALLERY_IMAGES = [
-  { id: 1, src: "/assets/kavitha.jpg", title: "Kavitha", note: "Where it all began" },
+  { id: 1, src: "/assets/kavitha.webp", title: "Kavitha", note: "Where it all began" },
   { id: 2, src: "/assets/study.webp", title: "Education", note: "Knowledge is hope" },
-  { id: 3, src: "/assets/p11.jpg", title: "Nutrition", note: "A meal is a promise" },
-  { id: 4, src: "/assets/pt5.jpg", title: "Relief", note: "Always there" },
+  { id: 3, src: "/assets/p11.webp", title: "Nutrition", note: "A meal is a promise" },
+  { id: 4, src: "/assets/pt5.webp", title: "Relief", note: "Always there" },
   { id: 5, src: MEDIA.hero.global, title: "Global", note: "One world, one family" },
   { id: 6, src: MEDIA.hero.future, title: "Future", note: "Dreaming together" },
 ];

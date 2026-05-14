@@ -128,6 +128,7 @@ const GrandFinale = () => {
                         <FooterLink to="/get-involved">Volunteer</FooterLink>
                         <FooterLink to="/careers">Careers</FooterLink>
                         <FooterLink to="/contact">Contact</FooterLink>
+                        <FooterLink to="/event">Events</FooterLink>
                     </div>
                     <div className="col-span-2 lg:col-span-2 block">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-6">Newsletter</h3>

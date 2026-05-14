@@ -5,14 +5,14 @@ export const CATEGORIES = ["All", "Education", "Healthcare", "Community", "Kavit
 export const GALLERY_ITEMS = [
     {
         type: 'image',
-        src: "/assets/p11.jpg",
+        src: "/assets/p11.webp",
         category: 'Healthcare',
         size: 'wide',
         title: "Daily Nutrition"
     },
     {
         type: 'image',
-        src: '/assets/pt5.jpg',
+        src: '/assets/pt5.webp',
         category: 'Community',
         size: 'dead',
         title: "Charity & Joy"
@@ -26,63 +26,63 @@ export const GALLERY_ITEMS = [
     },
     {
         type: 'image',
-        src: "/assets/pp12.jpeg",
+        src: "/assets/pp12.webp",
         category: 'Healthcare',
         size: 'large',
         title: "Medical Relief"
     },
     {
         type: 'image',
-        src: '/assets/pt2.jpeg',
+        src: '/assets/pt2.webp',
         category: 'Education',
         size: 'wide',
         title: "Mentorship"
     },
     {
         type: 'image',
-        src: '/assets/pt3.jpeg',
+        src: '/assets/pt3.webp',
         category: 'Community',
         size: 'medium',
         title: "Unbound Freedom"
     },
     {
         type: 'image',
-        src: '/assets/pt7.jpg',
+        src: '/assets/pt7.webp',
         category: 'Kavitha',
         size: 'medium',
         // title: "Harvest Sharing"
     },
     {
         type: 'image',
-        src: '/assets/pt9.jpg',
+        src: '/assets/pt9.webp',
         category: 'Sustainability',
         size: 'medium',
         title: "New Roots"
     },
     {
         type: 'image',
-        src: '/assets/p14.jpeg',
+        src: '/assets/p14.webp',
         category: 'Kavitha',
         size: 'dead',
         // title: "Lifeline River"
     },
     {
         type: 'image',
-        src: '/assets/pt6.jpg',
+        src: '/assets/pt6.webp',
         category: 'Community',
         size: 'wide',
         title: "Feast for All"
     },
     {
         type: 'image',
-        src: "/assets/p13.jpeg",
+        src: "/assets/p13.webp",
         category: 'Healthcare',
         size: 'medium',
         title: "Daily Rounds"
     },
     {
         type: 'image',
-        src: '/assets/pt10.jpg',
+        src: '/assets/pt10.webp',
         category: 'Education',
         size: 'medium',
         title: "Digital Access"
@@ -96,14 +96,14 @@ export const GALLERY_ITEMS = [
     },
     {
         type: 'image',
-        src: '/assets/p16.jpeg',
+        src: '/assets/p16.webp',
         category: 'Education',
         size: 'wide',
         title: "Salad Deco Competition"
     },
     {
         type: 'image',
-        src: '/assets/p18.png',
+        src: '/assets/p18.webp',
         category: 'Education',
         size: 'dead',
         title: "Diwali Celebration"
@@ -117,7 +117,7 @@ export const GALLERY_ITEMS = [
     },
     {
         type: 'image',
-        src: '/assets/p17.jpg',
+        src: '/assets/p17.webp',
         category: 'Healthcare',
         size: 'wide',
         title: ""

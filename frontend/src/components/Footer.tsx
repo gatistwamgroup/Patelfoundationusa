@@ -24,7 +24,7 @@ const footerLinks = {
     { name: 'Donate', href: '/donate' },
     { name: 'Volunteer', href: '/get-involved' },
     { name: 'Partner With Us', href: '/get-involved' },
-    { name: 'Events', href: '/get-involved' },
+    { name: 'Events', href: '/event' },
   ],
 };
 
@@ -222,8 +222,8 @@ const Footer = () => {
             </p>
           </div>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-primary-foreground transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-primary-foreground transition-colors">Terms of Service</a>
+            <Link to="/privacy" className="hover:text-primary-foreground transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-primary-foreground transition-colors">Terms of Service</Link>
             <a href="#" className="hover:text-primary-foreground transition-colors">Cookie Policy</a>
           </div>
         </div>
