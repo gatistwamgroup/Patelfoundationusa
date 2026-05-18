@@ -92,7 +92,7 @@ exports.sendBlast = async (req, res) => {
 
         let subscribers;
         if (isTest) {
-            subscribers = [{ email: process.env.EMAIL_USER }];
+            subscribers = [{ email: process.env.ADMIN_EMAIL }];
         } else {
             subscribers = await Newsletter.find({ status: 'active' }).select('email');
         }

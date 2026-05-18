@@ -1,18 +1,28 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const createTransporter = () => {
-    return nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    return {
+        sendMail: async (options) => {
+            const resendOptions = {
+                from: options.from,
+                to: options.to,
+                bcc: options.bcc,
+                subject: options.subject,
+                html: options.html,
+            };
+            const response = await resend.emails.send(resendOptions);
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
+            return response.data;
         }
-    });
+    };
 };
 
 const sendNewsletterBlast = async (subscribers, subject, content) => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        throw new Error("SMTP Credentials not configured");
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY not configured");
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
@@ -22,9 +32,10 @@ const sendNewsletterBlast = async (subscribers, subject, content) => {
     // or send them in batches for large lists
     const recipientEmails = subscribers.map(s => s.email);
 
+    const fromEmail = process.env.EMAIL_FROM || 'donations@patelfoundation.org';
     const mailOptions = {
-        from: `"Patel Foundation Updates" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_USER, // Send to self
+        from: `Patel Foundation <${fromEmail}>`,
+        to: fromEmail, // Send to self
         bcc: recipientEmails, // Everyone else is BCC
         subject: subject,
         html: `

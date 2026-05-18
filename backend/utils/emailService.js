@@ -1,5 +1,6 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const path = require('path');
+const fs = require('fs');
 const EmailLog = require('../models/EmailLog');
 
 const LOGO_ATTACHMENT = {
@@ -10,13 +11,37 @@ const LOGO_ATTACHMENT = {
 };
 
 const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  return {
+    sendMail: async (options) => {
+      const resendOptions = {
+        from: options.from,
+        to: options.to,
+        bcc: options.bcc,
+        subject: options.subject,
+        html: options.html,
+      };
+
+      if (options.attachments && options.attachments.length > 0) {
+        resendOptions.attachments = options.attachments.map(att => {
+          let content = att.content;
+          if (!content && att.path) {
+            content = fs.readFileSync(att.path);
+          }
+          return {
+            filename: att.filename,
+            content: content
+          };
+        });
+      }
+
+      const response = await resend.emails.send(resendOptions);
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      return response.data;
+    }
+  };
 };
 
 const logEmail = async (to, subject, type, status, error = null, source = "USA") => {
@@ -29,8 +54,8 @@ const logEmail = async (to, subject, type, status, error = null, source = "USA")
 
 // ─── Donor Receipt Email (Ultra-Premium Light Theme) ────────────────────────
 const sendDonationReceipt = async (donor) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[Email] EMAIL_USER/EMAIL_PASS not configured. Skipping receipt.');
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not configured. Skipping receipt.');
     return;
   }
 
@@ -43,7 +68,7 @@ const sendDonationReceipt = async (donor) => {
 
   const transporter = createTransporter();
   const mailOptions = {
-    from: `"Patel Foundation" <${process.env.EMAIL_USER}>`,
+    from: `Patel Foundation <${process.env.EMAIL_FROM || 'donations@patelfoundation.org'}>`,
     to: donor.email,
     subject: `Your Donation Receipt — Thank You, ${donorName}`,
     html: `<!DOCTYPE html>
@@ -161,12 +186,12 @@ const sendDonationReceipt = async (donor) => {
 
 // ─── Admin Notification Email (Ultra-Premium Light Theme) ───────────────────
 const sendAdminNotification = async (donor) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[Email] EMAIL_USER/EMAIL_PASS not configured. Skipping admin notification.');
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not configured. Skipping admin notification.');
     return;
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+  const adminEmail = process.env.ADMIN_EMAIL;
   const donorName = donor.isAnonymous ? 'Anonymous Donor' : (donor.name || 'Unknown');
   const amount = donor.amount ? donor.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
   const currency = donor.currency || 'USD';
@@ -176,7 +201,7 @@ const sendAdminNotification = async (donor) => {
 
   const transporter = createTransporter();
   const mailOptions = {
-    from: `"Patel Foundation Alerts" <${process.env.EMAIL_USER}>`,
+    from: `Patel Foundation <${process.env.EMAIL_FROM || 'donations@patelfoundation.org'}>`,
     to: adminEmail,
     subject: `New Donation: $${amount} received from ${donorName}`,
     html: `<!DOCTYPE html>
@@ -301,7 +326,7 @@ const sendAdminNotification = async (donor) => {
 
 // ─── Inquiry Acknowledgment Email (Luxury Minimalist) ────────────────────────
 const sendInquiryAcknowledgment = async (inquiry) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const { name, email, type } = inquiry;
   const isVolunteer = type === 'volunteer';
@@ -311,7 +336,7 @@ const sendInquiryAcknowledgment = async (inquiry) => {
 
   const transporter = createTransporter();
   const mailOptions = {
-    from: `"Patel Foundation" <${process.env.EMAIL_USER}>`,
+    from: `Patel Foundation <${process.env.EMAIL_FROM || 'donations@patelfoundation.org'}>`,
     to: email,
     subject: `Regarding your ${type} inquiry — Patel Foundation`,
     html: `<!DOCTYPE html>
@@ -378,8 +403,8 @@ const sendInquiryAcknowledgment = async (inquiry) => {
 
 // ─── Event Registration Receipt (Premium Dark/Gold Theme) ───────────────────
 const sendEventRegistrationReceipt = async (registration) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[Email] EMAIL_USER/EMAIL_PASS not configured. Skipping event receipt.');
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not configured. Skipping event receipt.');
     return;
   }
 
@@ -393,7 +418,7 @@ const sendEventRegistrationReceipt = async (registration) => {
 
   const transporter = createTransporter();
   const mailOptions = {
-    from: `"Patel Foundation" <${process.env.EMAIL_USER}>`,
+    from: `Patel Foundation <${process.env.EMAIL_FROM || 'donations@patelfoundation.org'}>`,
     to: email,
     subject: `Your E-Ticket Confirmed — ${fullName}`,
     html: `<!DOCTYPE html>
@@ -520,12 +545,12 @@ const sendEventRegistrationReceipt = async (registration) => {
 
 // ─── Admin Event Notification (High Priority) ───────────────────────────────
 const sendEventAdminNotification = async (registration) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[Email] EMAIL_USER/EMAIL_PASS not configured. Skipping event admin notification.');
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not configured. Skipping event admin notification.');
     return;
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+  const adminEmail = process.env.ADMIN_EMAIL;
   const { fullName, email, phone, ticketType, guests, amount, customId, currency = 'USD' } = registration;
   const date = new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const amountFormatted = typeof amount === 'number' ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : amount;
@@ -533,7 +558,7 @@ const sendEventAdminNotification = async (registration) => {
 
   const transporter = createTransporter();
   const mailOptions = {
-    from: `"Event Alerts" <${process.env.EMAIL_USER}>`,
+    from: `Patel Foundation <${process.env.EMAIL_FROM || 'donations@patelfoundation.org'}>`,
     to: adminEmail,
     subject: `Ticket Sold: $${amountFormatted} from ${fullName} [${ticketType}]`,
     html: `<!DOCTYPE html>
