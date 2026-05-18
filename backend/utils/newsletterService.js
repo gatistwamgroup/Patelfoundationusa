@@ -11,11 +11,29 @@ const createTransporter = () => {
                 subject: options.subject,
                 html: options.html,
             };
-            const response = await resend.emails.send(resendOptions);
-            if (response.error) {
-                throw new Error(response.error.message);
+            
+            console.log(`\n[Resend-Newsletter] --------------------------------------`);
+            console.log(`[Resend-Newsletter] Initiating bulk email send...`);
+            console.log(`[Resend-Newsletter] To: ${options.to}`);
+            console.log(`[Resend-Newsletter] BCC Count: ${Array.isArray(options.bcc) ? options.bcc.length : 1}`);
+            console.log(`[Resend-Newsletter] From: ${resendOptions.from}`);
+            console.log(`[Resend-Newsletter] Subject: "${options.subject}"`);
+
+            try {
+                const { data, error } = await resend.emails.send(resendOptions);
+                if (error) {
+                    console.error(`[Resend-Newsletter] Delivery Failed! API Error:`, JSON.stringify(error));
+                    throw new Error(error.message || JSON.stringify(error));
+                }
+                
+                console.log(`[Resend-Newsletter] Success! Message ID: ${data?.id}`);
+                console.log(`[Resend-Newsletter] --------------------------------------\n`);
+                return data;
+            } catch (err) {
+                console.error(`[Resend-Newsletter] Exception caught during execution:`, err.message || err);
+                console.log(`[Resend-Newsletter] --------------------------------------\n`);
+                throw err;
             }
-            return response.data;
         }
     };
 };

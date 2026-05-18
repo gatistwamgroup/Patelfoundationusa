@@ -35,11 +35,28 @@ const createTransporter = () => {
         });
       }
 
-      const response = await resend.emails.send(resendOptions);
-      if (response.error) {
-        throw new Error(response.error.message);
+      console.log(`\n[Resend] ---------------------------------------------`);
+      console.log(`[Resend] Initiating email send...`);
+      console.log(`[Resend] To: ${options.to || options.bcc}`);
+      console.log(`[Resend] From: ${resendOptions.from}`);
+      console.log(`[Resend] Subject: "${options.subject}"`);
+      
+      try {
+        const { data, error } = await resend.emails.send(resendOptions);
+        
+        if (error) {
+          console.error(`[Resend] Delivery Failed! API Error:`, JSON.stringify(error));
+          throw new Error(error.message || JSON.stringify(error));
+        }
+        
+        console.log(`[Resend] Success! Message ID: ${data?.id}`);
+        console.log(`[Resend] ---------------------------------------------\n`);
+        return data;
+      } catch (err) {
+        console.error(`[Resend] Exception caught during execution:`, err.message || err);
+        console.log(`[Resend] ---------------------------------------------\n`);
+        throw err;
       }
-      return response.data;
     }
   };
 };
