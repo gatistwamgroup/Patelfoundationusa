@@ -71,8 +71,9 @@ const logEmail = async (to, subject, type, status, error = null, source = "USA")
 
 // ─── Donor Receipt Email (Ultra-Premium Light Theme) ────────────────────────
 const sendDonationReceipt = async (donor) => {
+  console.log(`[Email Trace] sendDonationReceipt called for donor: ${donor.email}`);
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[Email] RESEND_API_KEY not configured. Skipping receipt.');
+    console.warn('[Email Trace] RESEND_API_KEY not configured. Skipping sendDonationReceipt.');
     return;
   }
 
@@ -203,8 +204,9 @@ const sendDonationReceipt = async (donor) => {
 
 // ─── Admin Notification Email (Ultra-Premium Light Theme) ───────────────────
 const sendAdminNotification = async (donor) => {
+  console.log(`[Email Trace] sendAdminNotification called for donor: ${donor.email}`);
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[Email] RESEND_API_KEY not configured. Skipping admin notification.');
+    console.warn('[Email Trace] RESEND_API_KEY not configured. Skipping sendAdminNotification.');
     return;
   }
 
@@ -343,7 +345,11 @@ const sendAdminNotification = async (donor) => {
 
 // ─── Inquiry Acknowledgment Email (Luxury Minimalist) ────────────────────────
 const sendInquiryAcknowledgment = async (inquiry) => {
-  if (!process.env.RESEND_API_KEY) return;
+  console.log(`[Email Trace] sendInquiryAcknowledgment called for inquiry: ${inquiry.email}`);
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email Trace] RESEND_API_KEY not configured. Skipping sendInquiryAcknowledgment.');
+    return;
+  }
 
   const { name, email, type } = inquiry;
   const isVolunteer = type === 'volunteer';
@@ -420,8 +426,9 @@ const sendInquiryAcknowledgment = async (inquiry) => {
 
 // ─── Event Registration Receipt (Premium Dark/Gold Theme) ───────────────────
 const sendEventRegistrationReceipt = async (registration) => {
+  console.log(`[Email Trace] sendEventRegistrationReceipt called for: ${registration.email}`);
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[Email] RESEND_API_KEY not configured. Skipping event receipt.');
+    console.warn('[Email Trace] RESEND_API_KEY not configured. Skipping sendEventRegistrationReceipt.');
     return;
   }
 
@@ -562,8 +569,9 @@ const sendEventRegistrationReceipt = async (registration) => {
 
 // ─── Admin Event Notification (High Priority) ───────────────────────────────
 const sendEventAdminNotification = async (registration) => {
+  console.log(`[Email Trace] sendEventAdminNotification called for registration: ${registration.email}`);
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[Email] RESEND_API_KEY not configured. Skipping event admin notification.');
+    console.warn('[Email Trace] RESEND_API_KEY not configured. Skipping sendEventAdminNotification.');
     return;
   }
 

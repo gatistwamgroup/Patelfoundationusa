@@ -10,7 +10,9 @@ exports.createInquiry = async (req, res) => {
 
         // Send Luxury Acknowledgment Email
         try {
+            console.log(`[Controller Trace] Calling sendInquiryAcknowledgment for ${email}...`);
             await sendInquiryAcknowledgment(inquiry);
+            console.log(`[Controller Trace] sendInquiryAcknowledgment execution completed.`);
         } catch (mailErr) {
             console.error("[Email] Acknowledgment failed:", mailErr);
         }
